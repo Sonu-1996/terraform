@@ -1,6 +1,10 @@
-resource "google_compute_network" "dev-vihaan" {
+data "google_project" "project" {
+  
+}
 
-  name                    = "vihaan-dev"
+resource "google_compute_network" "dev-sonu" {
+
+  name                    = "sonu-test-dev"
   auto_create_subnetworks = false
   routing_mode            = "REGIONAL"
   mtu                     = 1460
@@ -11,7 +15,7 @@ resource "google_compute_subnetwork" "sunetwork-mumbai-dev" {
   name          = "mumbai-subnetwork-dev"
   ip_cidr_range = "10.0.0.0/24"
   region        = "asia-south1"
-  network       = google_compute_network.dev-vihaan.id
+  network       = google_compute_network.dev-sonu.id
 }
 
 resource "google_compute_firewall" "allow_ssh" {
@@ -21,7 +25,7 @@ resource "google_compute_firewall" "allow_ssh" {
     protocol = "tcp"
   }
   direction     = "INGRESS"
-  network       = google_compute_network.dev-vihaan.id
+  network       = google_compute_network.dev-sonu.id
   priority      = 1000
   source_ranges = ["0.0.0.0/0"]
   target_tags   = ["ssh"]
@@ -32,17 +36,17 @@ resource "google_container_cluster" "dev" {
   location           = "asia-south1-a"
   initial_node_count = 1
   
-  network = google_compute_network.dev-vihaan.id
+  network = google_compute_network.dev-sonu.id
   subnetwork = google_compute_subnetwork.sunetwork-mumbai-dev.id
   networking_mode          = "VPC_NATIVE"
   remove_default_node_pool = true
 
   # Set `deletion_protection` to `true` will ensure that one cannot
   # accidentally delete this instance by use of Terraform.
-  deletion_protection      = true
+  #deletion_protection      = true
 
   node_config {
-    disk_size_gb = 50
+    disk_size_gb = "50"
     disk_type    = "pd-balanced"
     image_type   = "COS_CONTAINERD"
     machine_type = "e2-standard-2"
@@ -117,14 +121,15 @@ ip_allocation_policy {
   }
 
   
-  
+ datapath_provider = "ADVANCED_DATAPATH"
+ enable_cilium_clusterwide_network_policy = true
 
-  network_policy {
-    enabled  = true
-    provider = "PROVIDER_UNSPECIFIED"
-  }
+#   network_policy {
+#     enabled  = true
+#     provider = "dataplane_v2"
+#   }
 
-depends_on = [ google_compute_network.dev-vihaan ]
+depends_on = [ google_compute_network.dev-sonu ]
   
 
 
@@ -135,9 +140,10 @@ depends_on = [ google_compute_network.dev-vihaan ]
 resource "google_container_node_pool" "primary_preemptible_nodes" {
 
   name       = "my-node-pool"
-  cluster    = google_container_cluster.default.id
+  cluster    = google_container_cluster.dev.id
   node_count = 1
   node_config {
+    disk_size_gb = "50"
     preemptible  = false
     machine_type = "e2-standard-2"
     oauth_scopes = [
